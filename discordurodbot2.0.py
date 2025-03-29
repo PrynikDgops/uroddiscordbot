@@ -7,6 +7,9 @@ import re
 import asyncio
 from datetime import datetime, timedelta
 from typing import Optional, Union
+from dotenv import load_dotenv, find_dotenv
+
+load_dotenv(find_dotenv())
 
 # Получаем токен из переменной окружения
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
