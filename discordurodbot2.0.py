@@ -8,6 +8,11 @@ import asyncio
 from datetime import datetime, timedelta
 from typing import Optional, Union
 
+# Получаем токен из переменной окружения
+TOKEN = os.getenv("DISCORD_BOT_TOKEN")
+if not TOKEN:
+    raise ValueError("Переменная окружения DISCORD_BOT_TOKEN не установлена.")
+
 # Настройка интентов для работы с голосовыми каналами, участниками и содержимым сообщений
 intents = discord.Intents.default()
 intents.voice_states = True
@@ -38,11 +43,12 @@ def load_config() -> dict:
     default_config = {
         "required_work_time_hours": 8,
         "report_check_period_hours": 24,
-        "applicable_roles": [],
+        "applicable_roles": [],       # Если список не пуст, функции применяются только к участникам с указанными ролями
         "auto_report_enabled": False,
         "auto_report_channel": None,
-        "command_access_users": [],
-        "command_access_roles": []
+        "command_access_users": [],   # Список ID пользователей, которым разрешен доступ
+        "command_access_roles": [],   # Список ID ролей, которым разрешен доступ
+        "whitelist": []               # Теперь whitelist хранится в конфиге
     }
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, "r", encoding="utf-8") as f:
@@ -74,9 +80,8 @@ def is_applicable(member: discord.Member) -> bool:
             return True
     return False
 
-# Глобальный чек для всех слеш-команд: доступ получают администраторы и те, кому выдан доступ
+# Глобальный чек доступа: разрешены администраторы или доверенные пользователи/роли
 async def allowed_check(interaction: discord.Interaction) -> bool:
-    # Если администратор – всегда разрешено
     if interaction.user.guild_permissions.administrator:
         return True
     allowed_users = config.get("command_access_users", [])
@@ -90,7 +95,6 @@ async def allowed_check(interaction: discord.Interaction) -> bool:
 
 bot.tree.add_check(allowed_check)
 
-# Глобальное событие ошибок для слеш-команд (при отсутствии доступа)
 @bot.tree.error
 async def on_app_command_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
     if isinstance(error, app_commands.CheckFailure):
@@ -149,7 +153,7 @@ async def mention_not_in_channel(interaction: discord.Interaction, channel: Opti
     else:
         not_in_channel = [
             member.mention for member in interaction.guild.members
-            if member.voice is None and not member.bot and member.id not in whitelist and is_applicable(member)
+            if member.voice is None and not member.bot and member.id not in config.get("whitelist", []) and is_applicable(member)
         ]
     if not not_in_channel:
         await interaction.response.send_message("Все подходящие пользователи находятся в голосовых каналах!", ephemeral=True)
@@ -354,10 +358,9 @@ async def on_ready():
         print(f"Синхронизировано {len(synced)} слеш-команд.")
     except Exception as e:
         print("Ошибка синхронизации:", e)
-    # Если автоотчет включен, запускаем задачу
     if config.get("auto_report_enabled", False):
         global auto_report_task
         if auto_report_task is None or auto_report_task.done():
             auto_report_task = bot.loop.create_task(auto_report_task_func())
 
-bot.run("YOUR_BOT_TOKEN")
+bot.run(TOKEN)
