@@ -120,10 +120,8 @@ async def on_app_command_error(
 # --- СЛЕШ-КОМАНДЫ (Доступ только администраторам/доверенным) ---
 
 
-@bot.check(allowed_check)
-@bot.command(
-    name="voice_data", description="Выводит данные о голосовых и Stage каналах (JSON)."
-)
+@bot.tree.command(name="voice_data", description="Выводит данные о голосовых и Stage каналах (JSON).")
+@commands.check(allowed_check)
 async def voice_data(
     interaction: discord.Interaction,
     channel: Optional[Union[discord.VoiceChannel, discord.StageChannel]] = None,
@@ -153,11 +151,8 @@ async def voice_data(
     await interaction.followup.send(f"```json\n{json_data}\n```", ephemeral=True)
 
 
-@bot.check(allowed_check)
-@bot.command(
-    name="message_voice_data",
-    description="Отправляет данные голосовых/Stage каналов отдельными сообщениями.",
-)
+@bot.tree.command(name="message_voice_data", description="Отправляет данные голосовых/Stage каналов отдельными сообщениями.")
+@commands.check(allowed_check)
 async def message_voice_data(
     interaction: discord.Interaction,
     channel: Optional[Union[discord.VoiceChannel, discord.StageChannel]] = None,
@@ -184,11 +179,8 @@ async def message_voice_data(
         await interaction.followup.send(msg, ephemeral=True)
 
 
-@bot.check(allowed_check)
-@bot.command(
-    name="mention_not_in_channel",
-    description="Упоминает пользователей, не находящихся в голосовом/Stage канале.",
-)
+@bot.tree.command(name="mention_not_in_channel", description="Упоминает пользователей, не находящихся в голосовом/Stage канале.")
+@commands.check(allowed_check)
 async def mention_not_in_channel(
     interaction: discord.Interaction,
     channel: Optional[Union[discord.VoiceChannel, discord.StageChannel]] = None,
@@ -230,8 +222,8 @@ async def mention_not_in_channel(
         await interaction.followup.send(msg, ephemeral=True)
 
 
-@bot.check(allowed_check)
-@bot.command(name="whitelist_add", description="Добавляет пользователя в whitelist.")
+@bot.tree.command(name="whitelist_add", description="Добавляет пользователя в whitelist.")
+@commands.check(allowed_check)
 async def whitelist_add_cmd(interaction: discord.Interaction, member: discord.Member):
     allowed = config.get("whitelist", [])
     if member.id not in allowed:
@@ -248,8 +240,8 @@ async def whitelist_add_cmd(interaction: discord.Interaction, member: discord.Me
         )
 
 
-@bot.check(allowed_check)
-@bot.command(name="whitelist_remove", description="Удаляет пользователя из whitelist.")
+@bot.tree.command(name="whitelist_remove", description="Удаляет пользователя из whitelist.")
+@commands.check(allowed_check)
 async def whitelist_remove_cmd(
     interaction: discord.Interaction, member: discord.Member
 ):
@@ -268,10 +260,8 @@ async def whitelist_remove_cmd(
         )
 
 
-@bot.check(allowed_check)
-@bot.command(
-    name="whitelist_list", description="Выводит список пользователей в whitelist."
-)
+@bot.tree.command(name="whitelist_list", description="Выводит список пользователей в whitelist.")
+@commands.check(allowed_check)
 async def whitelist_list_cmd(interaction: discord.Interaction):
     allowed = config.get("whitelist", [])
     if not allowed:
@@ -289,11 +279,8 @@ async def whitelist_list_cmd(interaction: discord.Interaction):
     )
 
 
-@bot.check(allowed_check)
-@bot.command(
-    name="set_required_work_time",
-    description="Устанавливает требуемое время работы (часы).",
-)
+@bot.tree.command(name="set_required_work_time", description="Устанавливает требуемое время работы (часы).")
+@commands.check(allowed_check)
 async def set_required_work_time(interaction: discord.Interaction, hours: float):
     config["required_work_time_hours"] = hours
     save_config(config)
@@ -302,11 +289,8 @@ async def set_required_work_time(interaction: discord.Interaction, hours: float)
     )
 
 
-@bot.check(allowed_check)
-@bot.command(
-    name="set_report_check_period",
-    description="Устанавливает период проверки отчетности (часы).",
-)
+@bot.tree.command(name="set_report_check_period", description="Устанавливает период проверки отчетности (часы).")
+@commands.check(allowed_check)
 async def set_report_check_period(interaction: discord.Interaction, hours: float):
     config["report_check_period_hours"] = hours
     save_config(config)
@@ -315,10 +299,8 @@ async def set_report_check_period(interaction: discord.Interaction, hours: float
     )
 
 
-@bot.check(allowed_check)
-@bot.command(
-    name="add_applicable_role", description="Добавляет роль в список применимых ролей."
-)
+@bot.tree.command(name="add_applicable_role", description="Добавляет роль в список применимых ролей.")
+@commands.check(allowed_check)
 async def add_applicable_role(interaction: discord.Interaction, role: discord.Role):
     applicable = config.get("applicable_roles", [])
     if role.id not in applicable:
@@ -334,11 +316,8 @@ async def add_applicable_role(interaction: discord.Interaction, role: discord.Ro
         )
 
 
-@bot.check(allowed_check)
-@bot.command(
-    name="remove_applicable_role",
-    description="Удаляет роль из списка применимых ролей.",
-)
+@bot.tree.command(name="remove_applicable_role", description="Удаляет роль из списка применимых ролей.")
+@commands.check(allowed_check)
 async def remove_applicable_role(interaction: discord.Interaction, role: discord.Role):
     applicable = config.get("applicable_roles", [])
     if role.id in applicable:
@@ -354,10 +333,8 @@ async def remove_applicable_role(interaction: discord.Interaction, role: discord
         )
 
 
-@bot.check(allowed_check)
-@bot.command(
-    name="applicable_roles_list", description="Выводит список применимых ролей."
-)
+@bot.tree.command(name="applicable_roles_list", description="Выводит список применимых ролей.")
+@commands.check(allowed_check)
 async def applicable_roles_list(interaction: discord.Interaction):
     applicable = config.get("applicable_roles", [])
     if not applicable:
@@ -425,10 +402,8 @@ async def generate_report(report_channel: discord.TextChannel, period: float) ->
     return report
 
 
-@bot.check(allowed_check)
-@bot.command(
-    name="check_reports", description="Проверяет отчетность в указанном канале."
-)
+@bot.tree.command(name="check_reports", description="Проверяет отчетность в указанном канале.")
+@commands.check(allowed_check)
 async def check_reports(
     interaction: discord.Interaction,
     report_channel: discord.TextChannel,
@@ -458,10 +433,8 @@ async def auto_report_task_func():
         await channel.send(report)
 
 
-@bot.check(allowed_check)
-@bot.command(
-    name="enable_auto_report", description="Включает автоотчет в указанном канале."
-)
+@bot.tree.command(name="enable_auto_report", description="Включает автоотчет в указанном канале.")
+@commands.check(allowed_check)
 async def enable_auto_report(
     interaction: discord.Interaction, channel: discord.TextChannel
 ):
@@ -477,8 +450,8 @@ async def enable_auto_report(
     )
 
 
-@bot.check(allowed_check)
-@bot.command(name="disable_auto_report", description="Отключает автоотчет.")
+@bot.tree.command(name="disable_auto_report", description="Отключает автоотчет.")
+@commands.check(allowed_check)
 async def disable_auto_report(interaction: discord.Interaction):
     config["auto_report_enabled"] = False
     save_config(config)
@@ -489,11 +462,8 @@ async def disable_auto_report(interaction: discord.Interaction):
     await interaction.response.send_message("Автоотчет отключен.", ephemeral=True)
 
 
-@bot.check(allowed_check)
-@bot.command(
-    name="echo",
-    description="Отправляет сообщение от лица бота в указанный текстовый канал.",
-)
+@bot.tree.command(name="echo", description="Отправляет сообщение от лица бота в указанный текстовый канал.")
+@commands.check(allowed_check)
 async def echo(
     interaction: discord.Interaction, channel: discord.TextChannel, *, message: str
 ):
