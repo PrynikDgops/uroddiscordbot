@@ -370,7 +370,8 @@ async def echo(interaction: discord.Interaction, channel: discord.TextChannel, *
 async def on_ready():
     print(f"Бот запущен как {bot.user}")
     try:
-        synced = await bot.tree.sync()
+        bot.tree.clear_commands(guild=None)
+        synced = await bot.tree.sync(guild=None)
         print(f"Синхронизировано {len(synced)} слеш-команд.")
     except Exception as e:
         print("Ошибка синхронизации:", e)
