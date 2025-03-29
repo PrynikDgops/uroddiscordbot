@@ -471,21 +471,16 @@ async def echo(
     await interaction.response.send_message("Сообщение отправлено.", ephemeral=True)
 
 
-@bot.tree.command(name="ping", description="Проверка работоспособности бота")
-async def ping(interaction: discord.Interaction):
-    await interaction.response.send_message("Pong!", ephemeral=True)
-
-
 @bot.event
 async def on_ready():
     print(f"Бот запущен как {bot.user}")
     try:
         print("Начинаю синхронизацию команд...")
         print(f"Количество команд до очистки: {len(bot.tree.get_commands())}")
-        await bot.tree.sync()  # Уберем очистку команд
-        commands = await bot.tree.fetch_commands()
-        print(f"Успешно синхронизировано {len(commands)} слеш-команд:")
-        for command in commands:
+        await bot.tree.sync()
+        app_commands = await bot.tree.fetch_commands()
+        print(f"Успешно синхронизировано {len(app_commands)} слеш-команд:")
+        for command in app_commands:
             print(f"- /{command.name}")
     except Exception as e:
         print(f"Ошибка синхронизации: {str(e)}")
