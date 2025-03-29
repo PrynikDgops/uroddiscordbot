@@ -475,11 +475,15 @@ async def echo(
 async def on_ready():
     print(f"Бот запущен как {bot.user}")
     try:
+        print("Начинаю синхронизацию команд...")
         bot.tree.clear_commands(guild=None)
         synced = await bot.tree.sync(guild=None)
-        print(f"Синхронизировано {len(synced)} слеш-команд.")
+        print(f"Успешно синхронизировано {len(synced)} слеш-команд:")
+        for command in synced:
+            print(f"- /{command.name}")
     except Exception as e:
-        print("Ошибка синхронизации:", e)
+        print(f"Ошибка синхронизации: {str(e)}")
+        print(f"Тип ошибки: {type(e)}")
     if config.get("auto_report_enabled", False):
         global auto_report_task
         if auto_report_task is None or auto_report_task.done():
