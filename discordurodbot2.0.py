@@ -471,19 +471,28 @@ async def echo(
     await interaction.response.send_message("Сообщение отправлено.", ephemeral=True)
 
 
+@bot.tree.command(name="ping", description="Проверка работоспособности бота")
+async def ping(interaction: discord.Interaction):
+    await interaction.response.send_message("Pong!", ephemeral=True)
+
+
 @bot.event
 async def on_ready():
     print(f"Бот запущен как {bot.user}")
     try:
         print("Начинаю синхронизацию команд...")
-        bot.tree.clear_commands(guild=None)
-        synced = await bot.tree.sync(guild=None)
-        print(f"Успешно синхронизировано {len(synced)} слеш-команд:")
-        for command in synced:
+        print(f"Количество команд до очистки: {len(bot.tree.get_commands())}")
+        await bot.tree.sync()  # Уберем очистку команд
+        commands = await bot.tree.fetch_commands()
+        print(f"Успешно синхронизировано {len(commands)} слеш-команд:")
+        for command in commands:
             print(f"- /{command.name}")
     except Exception as e:
         print(f"Ошибка синхронизации: {str(e)}")
         print(f"Тип ошибки: {type(e)}")
+        import traceback
+        traceback.print_exc()
+    
     if config.get("auto_report_enabled", False):
         global auto_report_task
         if auto_report_task is None or auto_report_task.done():
