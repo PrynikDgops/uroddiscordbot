@@ -1,5 +1,4 @@
 import discord
-from discord import app_commands
 from discord.ext import commands, tasks
 import json
 import os
@@ -97,16 +96,16 @@ async def allowed_check(interaction: discord.Interaction) -> bool:
     return False
 
 @bot.tree.error
-async def on_app_command_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
-    if isinstance(error, app_commands.CheckFailure):
+async def on_app_command_error(interaction: discord.Interaction, error: bot.AppCommandError):
+    if isinstance(error, bot.CheckFailure):
         await interaction.response.send_message("Ошибка: недостаточно прав для использования этой команды.", ephemeral=True)
     else:
         await interaction.response.send_message(f"Ошибка: {error}", ephemeral=True)
 
 # --- СЛЕШ-КОМАНДЫ (Доступ только администраторам/доверенным) ---
 
-@app_commands.check(allowed_check)
-@app_commands.command(name="voice_data", description="Выводит данные о голосовых и Stage каналах (JSON).")
+@bot.check(allowed_check)
+@bot.command(name="voice_data", description="Выводит данные о голосовых и Stage каналах (JSON).")
 async def voice_data(interaction: discord.Interaction, channel: Optional[Union[discord.VoiceChannel, discord.StageChannel]] = None):
     await interaction.response.defer(ephemeral=True)
     voice_data_dict = {}
@@ -128,8 +127,8 @@ async def voice_data(interaction: discord.Interaction, channel: Optional[Union[d
     json_data = json.dumps(voice_data_dict, indent=4, ensure_ascii=False)
     await interaction.followup.send(f"```json\n{json_data}\n```", ephemeral=True)
 
-@app_commands.check(allowed_check)
-@app_commands.command(name="message_voice_data", description="Отправляет данные голосовых/Stage каналов отдельными сообщениями.")
+@bot.check(allowed_check)
+@bot.command(name="message_voice_data", description="Отправляет данные голосовых/Stage каналов отдельными сообщениями.")
 async def message_voice_data(interaction: discord.Interaction, channel: Optional[Union[discord.VoiceChannel, discord.StageChannel]] = None):
     await interaction.response.defer(ephemeral=True)
     if channel:
@@ -145,8 +144,8 @@ async def message_voice_data(interaction: discord.Interaction, channel: Optional
             msg = f"**Канал:** {vc.name}\n**Участники:** Нет участников"
         await interaction.followup.send(msg, ephemeral=True)
 
-@app_commands.check(allowed_check)
-@app_commands.command(name="mention_not_in_channel", description="Упоминает пользователей, не находящихся в голосовом/Stage канале.")
+@bot.check(allowed_check)
+@bot.command(name="mention_not_in_channel", description="Упоминает пользователей, не находящихся в голосовом/Stage канале.")
 async def mention_not_in_channel(interaction: discord.Interaction, channel: Optional[Union[discord.VoiceChannel, discord.StageChannel]] = None):
     if channel:
         not_in_channel = [
@@ -175,8 +174,8 @@ async def mention_not_in_channel(interaction: discord.Interaction, channel: Opti
     for msg in messages:
         await interaction.followup.send(msg, ephemeral=True)
 
-@app_commands.check(allowed_check)
-@app_commands.command(name="whitelist_add", description="Добавляет пользователя в whitelist.")
+@bot.check(allowed_check)
+@bot.command(name="whitelist_add", description="Добавляет пользователя в whitelist.")
 async def whitelist_add_cmd(interaction: discord.Interaction, member: discord.Member):
     allowed = config.get("whitelist", [])
     if member.id not in allowed:
@@ -187,8 +186,8 @@ async def whitelist_add_cmd(interaction: discord.Interaction, member: discord.Me
     else:
         await interaction.response.send_message(f"{member.name}#{member.discriminator} уже в whitelist.", ephemeral=True)
 
-@app_commands.check(allowed_check)
-@app_commands.command(name="whitelist_remove", description="Удаляет пользователя из whitelist.")
+@bot.check(allowed_check)
+@bot.command(name="whitelist_remove", description="Удаляет пользователя из whitelist.")
 async def whitelist_remove_cmd(interaction: discord.Interaction, member: discord.Member):
     allowed = config.get("whitelist", [])
     if member.id in allowed:
@@ -199,8 +198,8 @@ async def whitelist_remove_cmd(interaction: discord.Interaction, member: discord
     else:
         await interaction.response.send_message(f"{member.name}#{member.discriminator} не найден в whitelist.", ephemeral=True)
 
-@app_commands.check(allowed_check)
-@app_commands.command(name="whitelist_list", description="Выводит список пользователей в whitelist.")
+@bot.check(allowed_check)
+@bot.command(name="whitelist_list", description="Выводит список пользователей в whitelist.")
 async def whitelist_list_cmd(interaction: discord.Interaction):
     allowed = config.get("whitelist", [])
     if not allowed:
@@ -215,22 +214,22 @@ async def whitelist_list_cmd(interaction: discord.Interaction):
             members_list.append(str(user_id))
     await interaction.response.send_message("Whitelist: " + ", ".join(members_list), ephemeral=True)
 
-@app_commands.check(allowed_check)
-@app_commands.command(name="set_required_work_time", description="Устанавливает требуемое время работы (часы).")
+@bot.check(allowed_check)
+@bot.command(name="set_required_work_time", description="Устанавливает требуемое время работы (часы).")
 async def set_required_work_time(interaction: discord.Interaction, hours: float):
     config["required_work_time_hours"] = hours
     save_config(config)
     await interaction.response.send_message(f"Требуемое время работы установлено: {hours} часов.", ephemeral=True)
 
-@app_commands.check(allowed_check)
-@app_commands.command(name="set_report_check_period", description="Устанавливает период проверки отчетности (часы).")
+@bot.check(allowed_check)
+@bot.command(name="set_report_check_period", description="Устанавливает период проверки отчетности (часы).")
 async def set_report_check_period(interaction: discord.Interaction, hours: float):
     config["report_check_period_hours"] = hours
     save_config(config)
     await interaction.response.send_message(f"Период проверки отчетности установлен: {hours} часов.", ephemeral=True)
 
-@app_commands.check(allowed_check)
-@app_commands.command(name="add_applicable_role", description="Добавляет роль в список применимых ролей.")
+@bot.check(allowed_check)
+@bot.command(name="add_applicable_role", description="Добавляет роль в список применимых ролей.")
 async def add_applicable_role(interaction: discord.Interaction, role: discord.Role):
     applicable = config.get("applicable_roles", [])
     if role.id not in applicable:
@@ -241,8 +240,8 @@ async def add_applicable_role(interaction: discord.Interaction, role: discord.Ro
     else:
         await interaction.response.send_message(f"Роль {role.name} уже присутствует.", ephemeral=True)
 
-@app_commands.check(allowed_check)
-@app_commands.command(name="remove_applicable_role", description="Удаляет роль из списка применимых ролей.")
+@bot.check(allowed_check)
+@bot.command(name="remove_applicable_role", description="Удаляет роль из списка применимых ролей.")
 async def remove_applicable_role(interaction: discord.Interaction, role: discord.Role):
     applicable = config.get("applicable_roles", [])
     if role.id in applicable:
@@ -253,8 +252,8 @@ async def remove_applicable_role(interaction: discord.Interaction, role: discord
     else:
         await interaction.response.send_message(f"Роль {role.name} не найдена.", ephemeral=True)
 
-@app_commands.check(allowed_check)
-@app_commands.command(name="applicable_roles_list", description="Выводит список применимых ролей.")
+@bot.check(allowed_check)
+@bot.command(name="applicable_roles_list", description="Выводит список применимых ролей.")
 async def applicable_roles_list(interaction: discord.Interaction):
     applicable = config.get("applicable_roles", [])
     if not applicable:
@@ -314,8 +313,8 @@ async def generate_report(report_channel: discord.TextChannel, period: float) ->
     )
     return report
 
-@app_commands.check(allowed_check)
-@app_commands.command(name="check_reports", description="Проверяет отчетность в указанном канале.")
+@bot.check(allowed_check)
+@bot.command(name="check_reports", description="Проверяет отчетность в указанном канале.")
 async def check_reports(interaction: discord.Interaction, report_channel: discord.TextChannel, period: Optional[float] = None):
     if period is None:
         period = config.get("report_check_period_hours", 24)
@@ -338,8 +337,8 @@ async def auto_report_task_func():
         report = await generate_report(channel, period)
         await channel.send(report)
 
-@app_commands.check(allowed_check)
-@app_commands.command(name="enable_auto_report", description="Включает автоотчет в указанном канале.")
+@bot.check(allowed_check)
+@bot.command(name="enable_auto_report", description="Включает автоотчет в указанном канале.")
 async def enable_auto_report(interaction: discord.Interaction, channel: discord.TextChannel):
     config["auto_report_enabled"] = True
     config["auto_report_channel"] = channel.id
@@ -349,8 +348,8 @@ async def enable_auto_report(interaction: discord.Interaction, channel: discord.
         auto_report_task = bot.loop.create_task(auto_report_task_func())
     await interaction.response.send_message(f"Автоотчет включен. Отчеты будут публиковаться в {channel.mention} каждые {config.get('report_check_period_hours', 24)} часов.", ephemeral=True)
 
-@app_commands.check(allowed_check)
-@app_commands.command(name="disable_auto_report", description="Отключает автоотчет.")
+@bot.check(allowed_check)
+@bot.command(name="disable_auto_report", description="Отключает автоотчет.")
 async def disable_auto_report(interaction: discord.Interaction):
     config["auto_report_enabled"] = False
     save_config(config)
@@ -360,8 +359,8 @@ async def disable_auto_report(interaction: discord.Interaction):
         auto_report_task = None
     await interaction.response.send_message("Автоотчет отключен.", ephemeral=True)
 
-@app_commands.check(allowed_check)
-@app_commands.command(name="echo", description="Отправляет сообщение от лица бота в указанный текстовый канал.")
+@bot.check(allowed_check)
+@bot.command(name="echo", description="Отправляет сообщение от лица бота в указанный текстовый канал.")
 async def echo(interaction: discord.Interaction, channel: discord.TextChannel, *, message: str):
     await channel.send(message)
     await interaction.response.send_message("Сообщение отправлено.", ephemeral=True)
