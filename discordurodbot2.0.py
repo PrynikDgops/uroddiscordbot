@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from typing import Optional, Union
 
 import discord
+from discord.app_commands import AppCommandError
 from discord.ext import commands
 from dotenv import load_dotenv, find_dotenv
 
@@ -81,7 +82,7 @@ async def allowed_check(interaction: discord.Interaction) -> bool:
 
 @bot.tree.error
 async def on_app_command_error(
-    interaction: discord.Interaction, error: bot.tree.AppCommandError
+    interaction: discord.Interaction, error: AppCommandError
 ):
     if isinstance(error, bot.checkFailure):
         await interaction.response.send_message(
