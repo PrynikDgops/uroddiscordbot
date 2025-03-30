@@ -70,7 +70,7 @@ def is_applicable(member: discord.Member) -> bool:
     return any(role.id in applicable_roles for role in member.roles)
 
 
-def allowed_check(interaction: discord.Interaction) -> bool:
+async def allowed_check(interaction: discord.Interaction) -> bool:
     if interaction.user.guild_permissions.administrator:
         return True
     allowed_users = config.get("command_access_users", [])
@@ -84,7 +84,7 @@ def allowed_check(interaction: discord.Interaction) -> bool:
 async def on_app_command_error(
     interaction: discord.Interaction, error: AppCommandError
 ):
-    if isinstance(error, bot.checkFailure):
+    if isinstance(error, commands.checkFailure):
         await interaction.response.send_message(
             "Ошибка: недостаточно прав для использования этой команды.", ephemeral=True
         )
@@ -98,7 +98,7 @@ async def on_app_command_error(
 @bot.tree.command(
     name="voice_data", description="Выводит данные о голосовых и Stage каналах (JSON)."
 )
-@bot.check(allowed_check)
+@commands.check(allowed_check)
 async def voice_data(
     interaction: discord.Interaction,
     channel: Optional[Union[discord.VoiceChannel, discord.StageChannel]] = None,
@@ -132,7 +132,7 @@ async def voice_data(
     name="message_voice_data",
     description="Отправляет данные голосовых/Stage каналов отдельными сообщениями.",
 )
-@bot.check(allowed_check)
+@commands.check(allowed_check)
 async def message_voice_data(
     interaction: discord.Interaction,
     channel: Optional[Union[discord.VoiceChannel, discord.StageChannel]] = None,
@@ -163,7 +163,7 @@ async def message_voice_data(
     name="mention_not_in_channel",
     description="Упоминает пользователей, не находящихся в голосовом/Stage канале.",
 )
-@bot.check(allowed_check)
+@commands.check(allowed_check)
 async def mention_not_in_channel(
     interaction: discord.Interaction,
     channel: Optional[Union[discord.VoiceChannel, discord.StageChannel]] = None,
@@ -208,7 +208,7 @@ async def mention_not_in_channel(
 @bot.tree.command(
     name="whitelist_add", description="Добавляет пользователя в whitelist."
 )
-@bot.check(allowed_check)
+@commands.check(allowed_check)
 async def whitelist_add_cmd(interaction: discord.Interaction, member: discord.Member):
     whitelist_list = config.get("whitelist", [])
     if member.id not in whitelist_list:
@@ -228,7 +228,7 @@ async def whitelist_add_cmd(interaction: discord.Interaction, member: discord.Me
 @bot.tree.command(
     name="whitelist_remove", description="Удаляет пользователя из whitelist."
 )
-@bot.check(allowed_check)
+@commands.check(allowed_check)
 async def whitelist_remove_cmd(
     interaction: discord.Interaction, member: discord.Member
 ):
@@ -250,7 +250,7 @@ async def whitelist_remove_cmd(
 @bot.tree.command(
     name="whitelist_list", description="Выводит список пользователей в whitelist."
 )
-@bot.check(allowed_check)
+@commands.check(allowed_check)
 async def whitelist_list_cmd(interaction: discord.Interaction):
     whitelist_list = config.get("whitelist", [])
     if not whitelist_list:
@@ -272,7 +272,7 @@ async def whitelist_list_cmd(interaction: discord.Interaction):
     name="set_required_work_time",
     description="Устанавливает требуемое время работы (часы).",
 )
-@bot.check(allowed_check)
+@commands.check(allowed_check)
 async def set_required_work_time(interaction: discord.Interaction, hours: float):
     config["required_work_time_hours"] = hours
     save_config(config)
@@ -285,7 +285,7 @@ async def set_required_work_time(interaction: discord.Interaction, hours: float)
     name="set_report_check_period",
     description="Устанавливает период проверки отчетности (часы).",
 )
-@bot.check(allowed_check)
+@commands.check(allowed_check)
 async def set_report_check_period(interaction: discord.Interaction, hours: float):
     config["report_check_period_hours"] = hours
     save_config(config)
@@ -297,7 +297,7 @@ async def set_report_check_period(interaction: discord.Interaction, hours: float
 @bot.tree.command(
     name="add_applicable_role", description="Добавляет роль в список применимых ролей."
 )
-@bot.check(allowed_check)
+@commands.check(allowed_check)
 async def add_applicable_role(interaction: discord.Interaction, role: discord.Role):
     applicable = config.get("applicable_roles", [])
     if role.id not in applicable:
@@ -317,7 +317,7 @@ async def add_applicable_role(interaction: discord.Interaction, role: discord.Ro
     name="remove_applicable_role",
     description="Удаляет роль из списка применимых ролей.",
 )
-@bot.check(allowed_check)
+@commands.check(allowed_check)
 async def remove_applicable_role(interaction: discord.Interaction, role: discord.Role):
     applicable = config.get("applicable_roles", [])
     if role.id in applicable:
@@ -336,7 +336,7 @@ async def remove_applicable_role(interaction: discord.Interaction, role: discord
 @bot.tree.command(
     name="applicable_roles_list", description="Выводит список применимых ролей."
 )
-@bot.check(allowed_check)
+@commands.check(allowed_check)
 async def applicable_roles_list(interaction: discord.Interaction):
     applicable = config.get("applicable_roles", [])
     if not applicable:
@@ -407,7 +407,7 @@ async def generate_report(report_channel: discord.TextChannel, period: float) ->
 @bot.tree.command(
     name="check_reports", description="Проверяет отчетность в указанном канале."
 )
-@bot.check(allowed_check)
+@commands.check(allowed_check)
 async def check_reports(
     interaction: discord.Interaction,
     report_channel: discord.TextChannel,
@@ -440,7 +440,7 @@ async def auto_report_task_func():
 @bot.tree.command(
     name="enable_auto_report", description="Включает автоотчет в указанном канале."
 )
-@bot.check(allowed_check)
+@commands.check(allowed_check)
 async def enable_auto_report(
     interaction: discord.Interaction, channel: discord.TextChannel
 ):
@@ -457,7 +457,7 @@ async def enable_auto_report(
 
 
 @bot.tree.command(name="disable_auto_report", description="Отключает автоотчет.")
-@bot.check(allowed_check)
+@commands.check(allowed_check)
 async def disable_auto_report(interaction: discord.Interaction):
     config["auto_report_enabled"] = False
     save_config(config)
@@ -472,7 +472,7 @@ async def disable_auto_report(interaction: discord.Interaction):
     name="echo",
     description="Отправляет сообщение от лица бота в указанный текстовый канал.",
 )
-@bot.check(allowed_check)
+@commands.check(allowed_check)
 async def echo(
     interaction: discord.Interaction, channel: discord.TextChannel, *, message: str
 ):
