@@ -70,7 +70,7 @@ def is_applicable(member: discord.Member) -> bool:
     return any(role.id in applicable_roles for role in member.roles)
 
 
-async def allowed_check(interaction: discord.Interaction) -> bool:
+def allowed_check(interaction: discord.Interaction) -> bool:
     if interaction.user.guild_permissions.administrator:
         return True
     allowed_users = config.get("command_access_users", [])
