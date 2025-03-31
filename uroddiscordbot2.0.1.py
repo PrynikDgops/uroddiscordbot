@@ -9,6 +9,7 @@ import disnake # type: ignore
 from disnake.ext import commands # type: ignore
 from disnake.ext.commands import MissingPermissions, Context # type: ignore
 from dotenv import load_dotenv, find_dotenv # type: ignore
+from disnake import HTTPException, NotFound
 
 load_dotenv(find_dotenv())
 
@@ -170,6 +171,7 @@ async def mention_not_in_channel(
     inter: disnake.ApplicationCommandInteraction,
     channel: Optional[Union[disnake.VoiceChannel, disnake.StageChannel]] = None,
 ):
+    await inter.response.defer(ephemeral=True)
     if channel:
         not_in_channel = [
             member.mention
@@ -422,6 +424,7 @@ async def check_reports(
     report_channel: disnake.TextChannel,
     period: Optional[float] = None,
 ):
+    await inter.response.defer(ephemeral=True)
     if period is None:
         period = config.get("report_check_period_hours", 24)
     report = await generate_report(report_channel, period)
@@ -581,7 +584,9 @@ async def on_slash_command_error(inter: disnake.ApplicationCommandInteraction, e
         if not inter.response.is_done():
             await inter.response.defer(ephemeral=True)
         await inter.followup.send(f"Ошибка: {error}", ephemeral=True)
-    except Exception as e:
+    except NotFound:  # Игнорируем недействительные взаимодействия
+        pass
+    except HTTPException as e:
         print(f"Не удалось отправить сообщение об ошибке: {e}")
 
 
