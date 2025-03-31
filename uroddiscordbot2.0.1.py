@@ -578,11 +578,9 @@ async def list_access_roles(inter: disnake.ApplicationCommandInteraction):
 @bot.event
 async def on_slash_command_error(inter: disnake.ApplicationCommandInteraction, error: commands.CommandError):
     try:
-        if inter.response.is_done():
-            # Если первоначальный ответ уже отправлен, используем followup
-            await inter.followup.send(f"Ошибка: {error}", ephemeral=True)
-        else:
-            await inter.response.send_message(f"Ошибка: {error}", ephemeral=True)
+        if not inter.response.is_done():
+            await inter.response.defer(ephemeral=True)
+        await inter.followup.send(f"Ошибка: {error}", ephemeral=True)
     except Exception as e:
         print(f"Не удалось отправить сообщение об ошибке: {e}")
 
