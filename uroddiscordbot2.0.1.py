@@ -7,6 +7,7 @@ from typing import Optional, Union
 
 import disnake
 from disnake.ext import commands
+from disnake.ext.commands import MissingPermissions, Context
 from dotenv import load_dotenv, find_dotenv
 
 load_dotenv(find_dotenv())
@@ -27,16 +28,17 @@ bot = commands.InteractionBot(intents=intents)
 # Файл конфигурации
 CONFIG_FILE = "config.json"
 
+
 def load_config() -> dict:
     default_config = {
         "required_work_time_hours": 8,
         "report_check_period_hours": 24,
-        "applicable_roles": [],       # Если список не пуст, функции применяются только к участникам с указанными ролями
+        "applicable_roles": [],  # Если список не пуст, функции применяются только к участникам с указанными ролями
         "auto_report_enabled": False,
         "auto_report_channel": None,
-        "command_access_users": [],   # Список ID пользователей, которым разрешен доступ
-        "command_access_roles": [],   # Список ID ролей, которым разрешен доступ
-        "whitelist": []               # Список ID пользователей, исключаемых из некоторых функций
+        "command_access_users": [],  # Список ID пользователей, которым разрешен доступ
+        "command_access_roles": [],  # Список ID ролей, которым разрешен доступ
+        "whitelist": [],  # Список ID пользователей, исключаемых из некоторых функций
     }
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, "r", encoding="utf-8") as f:
@@ -50,12 +52,15 @@ def load_config() -> dict:
                 return default_config
     return default_config
 
+
 def save_config(config: dict) -> None:
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
         json.dump(config, f)
 
+
 # Глобальная конфигурация
 config = load_config()
+
 
 def is_applicable(member: disnake.Member) -> bool:
     """Возвращает True, если список applicable_roles пуст или участник имеет хотя бы одну из указанных ролей."""
@@ -64,27 +69,37 @@ def is_applicable(member: disnake.Member) -> bool:
         return True
     return any(role.id in applicable_roles for role in member.roles)
 
-async def allowed_check(inter: disnake.ApplicationCommandInteraction) -> bool:
+
+async def allowed_check(ctx: Context) -> bool:
     """Проверяет, имеет ли пользователь доступ к командам."""
-    if inter.author.guild_permissions.administrator:
+    if ctx.author.guild_permissions.administrator:
         return True
     allowed_users = config.get("command_access_users", [])
     allowed_roles = config.get("command_access_roles", [])
-    if inter.author.id in allowed_users:
+    if ctx.author.id in allowed_users:
         return True
-    return any(role.id in allowed_roles for role in inter.author.roles)
+    return any(role.id in allowed_roles for role in ctx.author.roles)
+
 
 @bot.event
-async def on_slash_command_error(inter: disnake.ApplicationCommandInteraction, error: Exception):
-    if isinstance(error, disnake.app_commands.CheckFailure):
-        await inter.response.send_message("Ошибка: недостаточно прав для использования этой команды.", ephemeral=True)
+async def on_slash_command_error(
+    inter: disnake.ApplicationCommandInteraction, error: Exception
+):
+    if isinstance(error, MissingPermissions):
+        await inter.response.send_message(
+            "Ошибка: недостаточно прав для использования этой команды.", ephemeral=True
+        )
     else:
         await inter.response.send_message(f"Ошибка: {error}", ephemeral=True)
+
 
 # --- СЛЕШ-КОМАНДЫ (Доступ только администраторам/доверенным) ---
 # Для каждого слеш-команды добавляем декоратор @commands.check(allowed_check) через @bot.slash_command.
 
-@bot.slash_command(name="voice_data", description="Выводит данные о голосовых и Stage каналах (JSON).")
+
+@bot.slash_command(
+    name="voice_data", description="Выводит данные о голосовых и Stage каналах (JSON)."
+)
 @commands.check(allowed_check)
 async def voice_data(
     inter: disnake.ApplicationCommandInteraction,
@@ -95,23 +110,30 @@ async def voice_data(
     if channel:
         channels = [channel]
     else:
-        channels = inter.guild.voice_channels + getattr(inter.guild, "stage_channels", [])
+        channels = inter.guild.voice_channels + getattr(
+            inter.guild, "stage_channels", []
+        )
     for vc in channels:
         members = []
         for member in vc.members:
             if is_applicable(member):
-                members.append({
-                    "id": member.id,
-                    "name": member.name,
-                    "discriminator": member.discriminator,
-                    "display_name": member.display_name,
-                })
+                members.append(
+                    {
+                        "id": member.id,
+                        "name": member.name,
+                        "discriminator": member.discriminator,
+                        "display_name": member.display_name,
+                    }
+                )
         voice_data_dict[vc.name] = members
     json_data = json.dumps(voice_data_dict, indent=4, ensure_ascii=False)
     await inter.followup.send(f"```json\n{json_data}\n```", ephemeral=True)
 
 
-@bot.slash_command(name="message_voice_data", description="Отправляет данные голосовых/Stage каналов отдельными сообщениями.")
+@bot.slash_command(
+    name="message_voice_data",
+    description="Отправляет данные голосовых/Stage каналов отдельными сообщениями.",
+)
 @commands.check(allowed_check)
 async def message_voice_data(
     inter: disnake.ApplicationCommandInteraction,
@@ -121,20 +143,28 @@ async def message_voice_data(
     if channel:
         channels = [channel]
     else:
-        channels = inter.guild.voice_channels + getattr(inter.guild, "stage_channels", [])
+        channels = inter.guild.voice_channels + getattr(
+            inter.guild, "stage_channels", []
+        )
     for vc in channels:
         if vc.members:
-            member_list = "\n".join([
-                f"{member.display_name} (ID: {member.id})"
-                for member in vc.members if is_applicable(member)
-            ])
+            member_list = "\n".join(
+                [
+                    f"{member.display_name} (ID: {member.id})"
+                    for member in vc.members
+                    if is_applicable(member)
+                ]
+            )
             msg = f"**Канал:** {vc.name}\n**Участники:**\n{member_list if member_list else 'Нет подходящих участников'}"
         else:
             msg = f"**Канал:** {vc.name}\n**Участники:** Нет участников"
         await inter.followup.send(msg, ephemeral=True)
 
 
-@bot.slash_command(name="mention_not_in_channel", description="Упоминает пользователей, не находящихся в голосовом/Stage канале.")
+@bot.slash_command(
+    name="mention_not_in_channel",
+    description="Упоминает пользователей, не находящихся в голосовом/Stage канале.",
+)
 @commands.check(allowed_check)
 async def mention_not_in_channel(
     inter: disnake.ApplicationCommandInteraction,
@@ -159,7 +189,9 @@ async def mention_not_in_channel(
             and is_applicable(member)
         ]
     if not not_in_channel:
-        await inter.response.send_message("Все подходящие пользователи находятся в голосовых каналах!", ephemeral=True)
+        await inter.response.send_message(
+            "Все подходящие пользователи находятся в голосовых каналах!", ephemeral=True
+        )
         return
     messages = []
     msg_chunk = ""
@@ -175,33 +207,51 @@ async def mention_not_in_channel(
         await inter.followup.send(msg, ephemeral=True)
 
 
-@bot.slash_command(name="whitelist_add", description="Добавляет пользователя в whitelist.")
+@bot.slash_command(
+    name="whitelist_add", description="Добавляет пользователя в whitelist."
+)
 @commands.check(allowed_check)
-async def whitelist_add_cmd(inter: disnake.ApplicationCommandInteraction, member: disnake.Member):
+async def whitelist_add_cmd(
+    inter: disnake.ApplicationCommandInteraction, member: disnake.Member
+):
     whitelist_list = config.get("whitelist", [])
     if member.id not in whitelist_list:
         whitelist_list.append(member.id)
         config["whitelist"] = whitelist_list
         save_config(config)
-        await inter.response.send_message(f"{member.display_name} добавлен в whitelist.", ephemeral=True)
+        await inter.response.send_message(
+            f"{member.display_name} добавлен в whitelist.", ephemeral=True
+        )
     else:
-        await inter.response.send_message(f"{member.display_name} уже в whitelist.", ephemeral=True)
+        await inter.response.send_message(
+            f"{member.display_name} уже в whitelist.", ephemeral=True
+        )
 
 
-@bot.slash_command(name="whitelist_remove", description="Удаляет пользователя из whitelist.")
+@bot.slash_command(
+    name="whitelist_remove", description="Удаляет пользователя из whitelist."
+)
 @commands.check(allowed_check)
-async def whitelist_remove_cmd(inter: disnake.ApplicationCommandInteraction, member: disnake.Member):
+async def whitelist_remove_cmd(
+    inter: disnake.ApplicationCommandInteraction, member: disnake.Member
+):
     whitelist_list = config.get("whitelist", [])
     if member.id in whitelist_list:
         whitelist_list.remove(member.id)
         config["whitelist"] = whitelist_list
         save_config(config)
-        await inter.response.send_message(f"{member.display_name} удалён из whitelist.", ephemeral=True)
+        await inter.response.send_message(
+            f"{member.display_name} удалён из whitelist.", ephemeral=True
+        )
     else:
-        await inter.response.send_message(f"{member.display_name} не найден в whitelist.", ephemeral=True)
+        await inter.response.send_message(
+            f"{member.display_name} не найден в whitelist.", ephemeral=True
+        )
 
 
-@bot.slash_command(name="whitelist_list", description="Выводит список пользователей в whitelist.")
+@bot.slash_command(
+    name="whitelist_list", description="Выводит список пользователей в whitelist."
+)
 @commands.check(allowed_check)
 async def whitelist_list_cmd(inter: disnake.ApplicationCommandInteraction):
     whitelist_list = config.get("whitelist", [])
@@ -215,57 +265,94 @@ async def whitelist_list_cmd(inter: disnake.ApplicationCommandInteraction):
             members_list.append(member.mention)
         else:
             members_list.append(str(user_id))
-    await inter.response.send_message("Whitelist: " + ", ".join(members_list), ephemeral=True)
+    await inter.response.send_message(
+        "Whitelist: " + ", ".join(members_list), ephemeral=True
+    )
 
 
-@bot.slash_command(name="set_required_work_time", description="Устанавливает требуемое время работы (часы).")
+@bot.slash_command(
+    name="set_required_work_time",
+    description="Устанавливает требуемое время работы (часы).",
+)
 @commands.check(allowed_check)
-async def set_required_work_time(inter: disnake.ApplicationCommandInteraction, hours: float):
+async def set_required_work_time(
+    inter: disnake.ApplicationCommandInteraction, hours: float
+):
     config["required_work_time_hours"] = hours
     save_config(config)
-    await inter.response.send_message(f"Требуемое время работы установлено: {hours} часов.", ephemeral=True)
+    await inter.response.send_message(
+        f"Требуемое время работы установлено: {hours} часов.", ephemeral=True
+    )
 
 
-@bot.slash_command(name="set_report_check_period", description="Устанавливает период проверки отчетности (часы).")
+@bot.slash_command(
+    name="set_report_check_period",
+    description="Устанавливает период проверки отчетности (часы).",
+)
 @commands.check(allowed_check)
-async def set_report_check_period(inter: disnake.ApplicationCommandInteraction, hours: float):
+async def set_report_check_period(
+    inter: disnake.ApplicationCommandInteraction, hours: float
+):
     config["report_check_period_hours"] = hours
     save_config(config)
-    await inter.response.send_message(f"Период проверки отчетности установлен: {hours} часов.", ephemeral=True)
+    await inter.response.send_message(
+        f"Период проверки отчетности установлен: {hours} часов.", ephemeral=True
+    )
 
 
-@bot.slash_command(name="add_applicable_role", description="Добавляет роль в список применимых ролей.")
+@bot.slash_command(
+    name="add_applicable_role", description="Добавляет роль в список применимых ролей."
+)
 @commands.check(allowed_check)
-async def add_applicable_role(inter: disnake.ApplicationCommandInteraction, role: disnake.Role):
+async def add_applicable_role(
+    inter: disnake.ApplicationCommandInteraction, role: disnake.Role
+):
     applicable = config.get("applicable_roles", [])
     if role.id not in applicable:
         applicable.append(role.id)
         config["applicable_roles"] = applicable
         save_config(config)
-        await inter.response.send_message(f"Роль {role.name} добавлена в список применимых ролей.", ephemeral=True)
+        await inter.response.send_message(
+            f"Роль {role.name} добавлена в список применимых ролей.", ephemeral=True
+        )
     else:
-        await inter.response.send_message(f"Роль {role.name} уже присутствует.", ephemeral=True)
+        await inter.response.send_message(
+            f"Роль {role.name} уже присутствует.", ephemeral=True
+        )
 
 
-@bot.slash_command(name="remove_applicable_role", description="Удаляет роль из списка применимых ролей.")
+@bot.slash_command(
+    name="remove_applicable_role",
+    description="Удаляет роль из списка применимых ролей.",
+)
 @commands.check(allowed_check)
-async def remove_applicable_role(inter: disnake.ApplicationCommandInteraction, role: disnake.Role):
+async def remove_applicable_role(
+    inter: disnake.ApplicationCommandInteraction, role: disnake.Role
+):
     applicable = config.get("applicable_roles", [])
     if role.id in applicable:
         applicable.remove(role.id)
         config["applicable_roles"] = applicable
         save_config(config)
-        await inter.response.send_message(f"Роль {role.name} удалена из списка применимых ролей.", ephemeral=True)
+        await inter.response.send_message(
+            f"Роль {role.name} удалена из списка применимых ролей.", ephemeral=True
+        )
     else:
-        await inter.response.send_message(f"Роль {role.name} не найдена.", ephemeral=True)
+        await inter.response.send_message(
+            f"Роль {role.name} не найдена.", ephemeral=True
+        )
 
 
-@bot.slash_command(name="applicable_roles_list", description="Выводит список применимых ролей.")
+@bot.slash_command(
+    name="applicable_roles_list", description="Выводит список применимых ролей."
+)
 @commands.check(allowed_check)
 async def applicable_roles_list(inter: disnake.ApplicationCommandInteraction):
     applicable = config.get("applicable_roles", [])
     if not applicable:
-        await inter.response.send_message("Список применимых ролей пуст (применяются все участники).", ephemeral=True)
+        await inter.response.send_message(
+            "Список применимых ролей пуст (применяются все участники).", ephemeral=True
+        )
         return
     roles_names = []
     for role_id in applicable:
@@ -274,11 +361,13 @@ async def applicable_roles_list(inter: disnake.ApplicationCommandInteraction):
             roles_names.append(role.name)
         else:
             roles_names.append(str(role_id))
-    await inter.response.send_message("Применимые роли: " + ", ".join(roles_names), ephemeral=True)
+    await inter.response.send_message(
+        "Применимые роли: " + ", ".join(roles_names), ephemeral=True
+    )
 
 
 async def generate_report(report_channel: disnake.TextChannel, period: float) -> str:
-    now = datetime.utcnow()
+    now = datetime.now()
     after_time = now - timedelta(hours=period)
     messages = await report_channel.history(after=after_time).flatten()
     work_times = {}
@@ -324,9 +413,15 @@ async def generate_report(report_channel: disnake.TextChannel, period: float) ->
     return report
 
 
-@bot.slash_command(name="check_reports", description="Проверяет отчетность в указанном канале.")
+@bot.slash_command(
+    name="check_reports", description="Проверяет отчетность в указанном канале."
+)
 @commands.check(allowed_check)
-async def check_reports(inter: disnake.ApplicationCommandInteraction, report_channel: disnake.TextChannel, period: Optional[float] = None):
+async def check_reports(
+    inter: disnake.ApplicationCommandInteraction,
+    report_channel: disnake.TextChannel,
+    period: Optional[float] = None,
+):
     if period is None:
         period = config.get("report_check_period_hours", 24)
     report = await generate_report(report_channel, period)
@@ -334,6 +429,7 @@ async def check_reports(inter: disnake.ApplicationCommandInteraction, report_cha
 
 
 auto_report_task = None
+
 
 async def auto_report_task_func():
     while config.get("auto_report_enabled", False):
@@ -349,9 +445,13 @@ async def auto_report_task_func():
         await channel.send(report)
 
 
-@bot.slash_command(name="enable_auto_report", description="Включает автоотчет в указанном канале.")
+@bot.slash_command(
+    name="enable_auto_report", description="Включает автоотчет в указанном канале."
+)
 @commands.check(allowed_check)
-async def enable_auto_report(inter: disnake.ApplicationCommandInteraction, channel: disnake.TextChannel):
+async def enable_auto_report(
+    inter: disnake.ApplicationCommandInteraction, channel: disnake.TextChannel
+):
     config["auto_report_enabled"] = True
     config["auto_report_channel"] = channel.id
     save_config(config)
@@ -376,9 +476,17 @@ async def disable_auto_report(inter: disnake.ApplicationCommandInteraction):
     await inter.response.send_message("Автоотчет отключен.", ephemeral=True)
 
 
-@bot.slash_command(name="echo", description="Отправляет сообщение от лица бота в указанный текстовый канал.")
+@bot.slash_command(
+    name="echo",
+    description="Отправляет сообщение от лица бота в указанный текстовый канал.",
+)
 @commands.check(allowed_check)
-async def echo(inter: disnake.ApplicationCommandInteraction, channel: disnake.TextChannel, *, message: str):
+async def echo(
+    inter: disnake.ApplicationCommandInteraction,
+    channel: disnake.TextChannel,
+    *,
+    message: str,
+):
     await channel.send(message)
     await inter.response.send_message("Сообщение отправлено.", ephemeral=True)
 
@@ -386,15 +494,6 @@ async def echo(inter: disnake.ApplicationCommandInteraction, channel: disnake.Te
 @bot.event
 async def on_ready():
     print(f"Бот запущен как {bot.user}")
-    try:
-        print("Начинаю синхронизацию команд...")
-        await bot.sync_commands()
-        commands_list = await bot.fetch_global_commands()
-        print(f"Успешно синхронизировано {len(commands_list)} слеш-команд:")
-        for cmd in commands_list:
-            print(f"- /{cmd.name}")
-    except Exception as e:
-        print(f"Ошибка синхронизации: {e}")
     if config.get("auto_report_enabled", False):
         global auto_report_task
         if auto_report_task is None or auto_report_task.done():
