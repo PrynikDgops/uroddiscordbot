@@ -576,7 +576,7 @@ async def list_access_roles(inter: disnake.ApplicationCommandInteraction):
     await inter.response.send_message("Доверенные роли: " + ", ".join(roles), ephemeral=True)
 
 @bot.event
-async def on_slash_command_error(inter: disnake.ApplicationCommandInteraction, error: disnake.app_commands.AppCommandError):
+async def on_slash_command_error(inter: disnake.ApplicationCommandInteraction, error: commands.CommandError):
     try:
         if inter.response.is_done():
             # Если первоначальный ответ уже отправлен, используем followup
