@@ -5,10 +5,10 @@ import re
 from datetime import datetime, timedelta
 from typing import Optional, Union
 
-import disnake
-from disnake.ext import commands
-from disnake.ext.commands import MissingPermissions, Context
-from dotenv import load_dotenv, find_dotenv
+import disnake # type: ignore
+from disnake.ext import commands # type: ignore
+from disnake.ext.commands import MissingPermissions, Context # type: ignore
+from dotenv import load_dotenv, find_dotenv # type: ignore
 
 load_dotenv(find_dotenv())
 
@@ -371,7 +371,7 @@ async def generate_report(report_channel: disnake.TextChannel, period: float) ->
     after_time = now - timedelta(hours=period)
     messages = await report_channel.history(after=after_time).flatten()
     work_times = {}
-    pattern = r"(?i)\b(?:работал|работала|отработал|отработала)\s+(\d+(?:[.,]\d+)?)\s*(?:час(?:ов|а)?)\b"
+    pattern = r"(\d+(?:[.,]\d+)?)"
     for msg in messages:
         match = re.search(pattern, msg.content)
         if match:
@@ -489,6 +489,102 @@ async def echo(
 ):
     await channel.send(message)
     await inter.response.send_message("Сообщение отправлено.", ephemeral=True)
+
+@bot.slash_command(name="grant_access_user", description="Выдает доступ к командам указанному пользователю.")
+@commands.check(allowed_check)
+async def grant_access_user(inter: disnake.ApplicationCommandInteraction, member: disnake.Member):
+    allowed_users = config.get("command_access_users", [])
+    if member.id not in allowed_users:
+        allowed_users.append(member.id)
+        config["command_access_users"] = allowed_users
+        save_config(config)
+        await inter.response.send_message(f"{member.mention} теперь имеет доступ к командам.", ephemeral=True)
+    else:
+        await inter.response.send_message(f"{member.mention} уже имеет доступ.", ephemeral=True)
+
+
+@bot.slash_command(name="revoke_access_user", description="Отзывает доступ к командам у указанного пользователя.")
+@commands.check(allowed_check)
+async def revoke_access_user(inter: disnake.ApplicationCommandInteraction, member: disnake.Member):
+    allowed_users = config.get("command_access_users", [])
+    if member.id in allowed_users:
+        allowed_users.remove(member.id)
+        config["command_access_users"] = allowed_users
+        save_config(config)
+        await inter.response.send_message(f"Доступ для {member.mention} отозван.", ephemeral=True)
+    else:
+        await inter.response.send_message(f"{member.mention} не имеет доступа.", ephemeral=True)
+
+
+@bot.slash_command(name="list_access_users", description="Выводит список пользователей, имеющих доступ к командам.")
+@commands.check(allowed_check)
+async def list_access_users(inter: disnake.ApplicationCommandInteraction):
+    allowed_users = config.get("command_access_users", [])
+    if not allowed_users:
+        await inter.response.send_message("Список доверенных пользователей пуст.", ephemeral=True)
+        return
+    users = []
+    for user_id in allowed_users:
+        member = inter.guild.get_member(user_id)
+        if member:
+            users.append(member.mention)
+        else:
+            users.append(str(user_id))
+    await inter.response.send_message("Доверенные пользователи: " + ", ".join(users), ephemeral=True)
+
+
+@bot.slash_command(name="grant_access_role", description="Выдает доступ к командам указанной роли.")
+@commands.check(allowed_check)
+async def grant_access_role(inter: disnake.ApplicationCommandInteraction, role: disnake.Role):
+    allowed_roles = config.get("command_access_roles", [])
+    if role.id not in allowed_roles:
+        allowed_roles.append(role.id)
+        config["command_access_roles"] = allowed_roles
+        save_config(config)
+        await inter.response.send_message(f"Роль {role.name} теперь имеет доступ к командам.", ephemeral=True)
+    else:
+        await inter.response.send_message(f"Роль {role.name} уже имеет доступ.", ephemeral=True)
+
+
+@bot.slash_command(name="revoke_access_role", description="Отзывает доступ к командам у указанной роли.")
+@commands.check(allowed_check)
+async def revoke_access_role(inter: disnake.ApplicationCommandInteraction, role: disnake.Role):
+    allowed_roles = config.get("command_access_roles", [])
+    if role.id in allowed_roles:
+        allowed_roles.remove(role.id)
+        config["command_access_roles"] = allowed_roles
+        save_config(config)
+        await inter.response.send_message(f"Доступ для роли {role.name} отозван.", ephemeral=True)
+    else:
+        await inter.response.send_message(f"Роль {role.name} не имеет доступа.", ephemeral=True)
+
+
+@bot.slash_command(name="list_access_roles", description="Выводит список ролей, имеющих доступ к командам.")
+@commands.check(allowed_check)
+async def list_access_roles(inter: disnake.ApplicationCommandInteraction):
+    allowed_roles = config.get("command_access_roles", [])
+    if not allowed_roles:
+        await inter.response.send_message("Список доверенных ролей пуст.", ephemeral=True)
+        return
+    roles = []
+    for role_id in allowed_roles:
+        role = inter.guild.get_role(role_id)
+        if role:
+            roles.append(role.name)
+        else:
+            roles.append(str(role_id))
+    await inter.response.send_message("Доверенные роли: " + ", ".join(roles), ephemeral=True)
+
+@bot.event
+async def on_slash_command_error(inter: disnake.ApplicationCommandInteraction, error: disnake.app_commands.AppCommandError):
+    try:
+        if inter.response.is_done():
+            # Если первоначальный ответ уже отправлен, используем followup
+            await inter.followup.send(f"Ошибка: {error}", ephemeral=True)
+        else:
+            await inter.response.send_message(f"Ошибка: {error}", ephemeral=True)
+    except Exception as e:
+        print(f"Не удалось отправить сообщение об ошибке: {e}")
 
 
 @bot.event
