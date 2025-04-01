@@ -171,7 +171,7 @@ async def mention_not_in_channel(
     inter: disnake.ApplicationCommandInteraction,
     channel: Optional[Union[disnake.VoiceChannel, disnake.StageChannel]] = None,
 ):
-    await inter.response.defer(ephemeral=True)
+    await inter.response.defer()
     if channel:
         not_in_channel = [
             member.mention
@@ -418,13 +418,14 @@ async def generate_report(report_channel: disnake.TextChannel, period: float) ->
 @bot.slash_command(name="check_reports", description="Проверяет отчетность в указанном канале.")
 @commands.check(allowed_check)
 async def check_reports(inter: disnake.ApplicationCommandInteraction, report_channel: disnake.TextChannel, period: Optional[float] = None):
+    # Немедленно откладываем ответ, чтобы дать себе больше времени
+    await inter.response.defer()
     if period is None:
         period = config.get("report_check_period_hours", 24)
     report = await generate_report(report_channel, period)
-    if inter.response.is_done():
-        await inter.followup.send(report)
-    else:
-        await inter.response.send_message(report)
+    # Редактируем первоначальный ответ, отправляя отчет
+    await inter.edit_original_response(content=report)
+
 
 
 auto_report_task = None
